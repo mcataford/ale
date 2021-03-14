@@ -55,8 +55,21 @@ function! ale#handlers#eslint#GetCwd(buffer) abort
         let l:nmi = strridx(l:executable, 'node_modules')
         let l:project_dir = l:executable[0:l:nmi - 2]
     else
+        " Patched behaviour: looks up yarn pnp before node_modules to add
+        " support for Yarn Berry.
         let l:modules_dir = ale#path#FindNearestDirectory(a:buffer, 'node_modules')
-        let l:project_dir = !empty(l:modules_dir) ? fnamemodify(l:modules_dir, ':h:h') : ''
+        let l:yarn_cpnp = ale#path#FindNearestFile(a:buffer, '.pnp.cjs')
+        let l:yarn_pnp = ale#path#FindNearestFile(a:buffer, '.pnp.js')
+
+        if !empty(l:yarn_pnp)
+            let l:project_dir = !empty(l:yarn_pnp) ? fnamemodify(l:yarn_pnp, ':h') : ''
+        elseif !empty(l:yarn_cpnp)
+            let l:project_dir = !empty(l:yarn_cpnp) ? fnamemodify(l:yarn_cpnp, ':h') : ''
+        elseif !empty(l:modules_dir)
+            let l:project_dir = !empty(l:modules_dir) ? fnamemodify(l:modules_dir, ':h:h') : ''
+        else
+            let l:project_dir = ''
+        endif
     endif
 
     return !empty(l:project_dir) ? l:project_dir : ''
